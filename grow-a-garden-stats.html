@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grow a Garden - Real-Time Roblox Stats</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #23262f 0%, #6c63ff 100%);
+      color: #f4f4f4;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .stats-container {
+      background: rgba(30,30,40,0.98);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.37);
+      padding: 40px 32px 32px 32px;
+      max-width: 400px;
+      width: 100%;
+      margin: 40px auto;
+      text-align: center;
+      animation: fadeIn 1s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .stats-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+      background: linear-gradient(90deg, #6c63ff, #00e6d0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-block {
+      background: #23262f;
+      border-radius: 14px;
+      margin: 18px 0;
+      padding: 22px 0 14px 0;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.13);
+    }
+    .stat-label {
+      color: #00e6d0;
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-size: 2.1rem;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+    .stat-updated {
+      color: #b0b3c6;
+      font-size: 1rem;
+      margin-top: 10px;
+    }
+    .error {
+      color: #ff4444;
+      margin-top: 18px;
+      font-size: 1.1rem;
+    }
+    .footer {
+      margin-top: 30px;
+      color: #b0b3c6;
+      font-size: 0.98rem;
+      text-align: center;
+    }
+    .roblox-logo {
+      width: 120px;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2));
+    }
+    @media (max-width: 500px) {
+      .stats-container { padding: 24px 6vw; }
+      .stats-title { font-size: 1.3rem; }
+      .stat-value { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stats-container">
+    <img src="https://www.edigitalagency.com.au/wp-content/uploads/roblox-logo-black-png-transparent-300x56.png" alt="Roblox Logo" class="roblox-logo">
+    <div class="stats-title">Grow a Garden<br>Real-Time Game Stats</div>
+    <div id="loading">Loading stats...</div>
+    <div id="error" class="error" style="display:none"></div>
+    <div id="stats" style="display:none">
+      <div class="stat-block">
+        <div class="stat-label">Active Players</div>
+        <div class="stat-value" id="active-players">-</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Visits</div>
+        <div class="stat-value" id="visits">-</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Last Updated</div>
+        <div class="stat-value" id="updated">-</div>
+      </div>
+    </div>
+    <div class="footer">Stats update every time you load this page. Data via RoProxy.com.<br><span style="color:#ff4444;font-size:0.95em;">Not affiliated with Roblox.</span></div>
+  </div>
+  <script>
+    (function() {
+      const placeId = "126884695634066";
+      const loading = document.getElementById('loading');
+      const error = document.getElementById('error');
+      const stats = document.getElementById('stats');
+      const activePlayers = document.getElementById('active-players');
+      const visits = document.getElementById('visits');
+      const updated = document.getElementById('updated');
+      let universeId = null;
+      let firstLoad = true;
+      function fetchStats() {
+        if (!universeId) {
+          fetch(`https://apis.roproxy.com/universes/v1/places/${placeId}/universe`)
+            .then(r => r.json())
+            .then(data => {
+              if (!data.universeId) throw new Error('Universe ID not found');
+              universeId = data.universeId;
+              fetchStats();
+            })
+            .catch(e => {
+              loading.style.display = 'none';
+              error.style.display = '';
+              error.textContent = 'Failed to load stats: ' + e.message + (e.message.includes('CORS') ? ' (Browser CORS restrictions may apply.)' : '');
+            });
+          return;
+        }
+        fetch(`https://games.roproxy.com/v1/games?universeIds=${universeId}`)
+          .then(r => r.json())
+          .then(gameData => {
+            if (!gameData.data || !gameData.data[0]) throw new Error('Game data not found');
+            const g = gameData.data[0];
+            activePlayers.textContent = g.playing.toLocaleString();
+            visits.textContent = g.visits.toLocaleString();
+            updated.textContent = new Date(g.updated).toLocaleString();
+            if (firstLoad) {
+              loading.style.display = 'none';
+              stats.style.display = '';
+              firstLoad = false;
+            }
+          })
+          .catch(e => {
+            loading.style.display = 'none';
+            error.style.display = '';
+            error.textContent = 'Failed to load stats: ' + e.message + (e.message.includes('CORS') ? ' (Browser CORS restrictions may apply.)' : '');
+          });
+      }
+      fetchStats();
+      setInterval(fetchStats, 1000);
+    })();
+  </script>
+</body>
+</html>
